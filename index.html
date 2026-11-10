@@ -41,11 +41,9 @@
     display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
   }
   .sort-btn:active{transform:scale(.96)}
-  body.sorting .sort-btn{background:linear-gradient(135deg,var(--teal1),var(--teal2));border-color:transparent;color:#04231c}
 
-  .hint{color:var(--muted);font-size:11.5px;margin:14px 2px 18px;line-height:1.6;min-height:16px;transition:.2s}
+  .hint{color:var(--muted);font-size:11.5px;margin:14px 2px 18px;line-height:1.6;min-height:16px}
   .hint b{color:#cdd6f5;font-weight:600}
-  body.sorting .hint{color:#8fe9d4}
 
   /* 横排网格：手机2列 / 平板3列 / 桌面4列 */
   .list{
@@ -63,7 +61,7 @@
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     box-shadow:0 10px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04);
     transition:transform .15s ease,border-color .15s ease,background .15s ease,box-shadow .15s ease;
-    touch-action:pan-y;min-height:148px;
+    touch-action:none;min-height:148px;cursor:grab;-webkit-user-select:none;user-select:none;
   }
   .card:active{background:var(--card-hi)}
   .badge{
@@ -82,27 +80,18 @@
   .body .tag{display:inline-block;margin-top:auto;padding-top:9px;font-size:10px;color:#aab4d6;
     background:rgba(255,255,255,.06);border:1px solid var(--line);padding:2px 8px;border-radius:999px;
     width:fit-content;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .arrow{position:absolute;top:14px;right:14px;color:var(--muted);font-size:20px;font-weight:300;transition:.18s}
+  .arrow{position:absolute;top:14px;right:14px;color:var(--muted);font-size:20px;font-weight:300}
 
-  /* 排序模式 */
-  .grip{position:absolute;top:12px;right:12px;display:none;color:var(--muted);font-size:18px;letter-spacing:-2px;
-    padding:4px 2px;cursor:grab;user-select:none}
-  body.sorting .arrow{display:none}
-  body.sorting .grip{display:block}
-  body.sorting .card{cursor:grab;touch-action:none;border-color:rgba(127,224,212,.35)}
-  body.sorting .card:active{background:var(--card)}
   .card.dragging{z-index:30;box-shadow:0 18px 44px rgba(0,0,0,.5);
     border-color:rgba(127,224,212,.6);transform:scale(1.04);cursor:grabbing;
     background:var(--card-hi)}
-  .card.dropbefore{box-shadow:0 -3px 0 0 var(--teal2)}
 
-  .add{border-style:dashed;background:transparent;box-shadow:none;align-items:center;justify-content:center;text-align:center}
+  .add{border-style:dashed;background:transparent;box-shadow:none;align-items:center;justify-content:center;text-align:center;cursor:default}
   .add .badge{background:rgba(255,255,255,.05);box-shadow:none;color:var(--muted);font-size:28px}
   .add .body{align-items:center}
   .add .body h2{color:var(--muted);margin-bottom:4px}
   .add .body .desc{color:var(--muted);text-align:center}
   .add .arrow{display:none}
-  body.sorting .add{opacity:.4}
 
   footer{text-align:center;color:var(--muted);font-size:11px;margin-top:28px;line-height:1.7;opacity:.85}
   footer code{background:rgba(255,255,255,.07);padding:1px 5px;border-radius:5px}
@@ -115,9 +104,9 @@
       <h1>🧭 我的工作台</h1>
       <p>一个网址，进所有工作台</p>
     </header>
-    <button class="sort-btn" id="sortBtn">↕ 排序</button>
+    <button class="sort-btn" id="resetBtn">↺ 重置顺序</button>
   </div>
-  <div class="hint" id="hint">想加新工作台？往文件夹丢一个 <b>.html</b>，在 <b>workbenches.json</b> 加一行，下面自动多一张卡。</div>
+  <div class="hint" id="hint">按住卡片<b>拖动</b>即可排序（松手自动保存），轻点打开对应工作台；右上「↺ 重置顺序」恢复默认。</div>
 
   <div class="list" id="list"></div>
 
@@ -129,7 +118,6 @@
 
 <script>
 var SAVE_KEY='nav_order_v1';
-var DEFAULT_HINT='想加新工作台？往文件夹丢一个 <b>.html</b>，在 <b>workbenches.json</b> 加一行，下面自动多一张卡。';
 var FALLBACK = [
   {file:"learning-dashboard.html", name:"任务工作台", emoji:"📋", color:"blue", tag:"learning-dashboard.html",
    desc:"日常学习 / 目标管理看板。打卡、目标、板块进度、超额统计都在这里。"},
@@ -141,10 +129,9 @@ var FALLBACK = [
    desc:"太乙环星情报中心（塔罗占卜）。你以往全部代码的最终集合升级版，尚未优化完。"}
 ];
 
-var byFile={}, ordered=[], sortMode=false, drag=null;
+var byFile={}, ordered=[], currentList=FALLBACK, drag=null, armed=null, suppressClick=false;
 var listEl=document.getElementById('list');
-var sortBtn=document.getElementById('sortBtn');
-var hintEl=document.getElementById('hint');
+var resetBtn=document.getElementById('resetBtn');
 
 function loadOrder(){ try{return JSON.parse(localStorage.getItem(SAVE_KEY))||[]}catch(e){return[]} }
 function saveOrder(files){ try{localStorage.setItem(SAVE_KEY,JSON.stringify(files))}catch(e){} }
@@ -158,13 +145,12 @@ function buildOrder(list){
 }
 
 function cardHTML(w){
-  return '<a class="card" data-file="'+w.file+'" href="'+w.file+'">'+
+  return '<a class="card" data-file="'+w.file+'" href="'+w.file+'" title="长按拖动排序">'+
     '<div class="badge '+(w.color||'blue')+'">'+(w.emoji||'📄')+'</div>'+
     '<div class="body"><h2>'+(w.name||w.file)+'</h2>'+
     '<div class="desc">'+(w.desc||'')+'</div>'+
     '<span class="tag">'+(w.tag||w.file)+'</span></div>'+
-    '<div class="arrow">›</div>'+
-    '<div class="grip">⠿</div></a>';
+    '<div class="arrow">›</div></a>';
 }
 function addCardHTML(){
   return '<div class="card add">'+
@@ -182,64 +168,76 @@ function readOrderFromDOM(){
 
 function bindCards(){
   Array.prototype.forEach.call(listEl.querySelectorAll('.card:not(.add)'),function(card){
-    card.addEventListener('click',function(e){ if(sortMode){ e.preventDefault(); } });
-    if(sortMode){
-      card.addEventListener('pointerdown',function(e){ onDown(e,card); });
-    }
+    card.addEventListener('pointerdown',function(e){ onDown(e,card); });
+    card.addEventListener('contextmenu',function(e){ e.preventDefault(); });
   });
 }
 
-function onDown(e,card){
-  e.preventDefault();
-  try{card.setPointerCapture(e.pointerId);}catch(_){}
-  drag={el:card, pid:e.pointerId, x:e.clientX, y:e.clientY, h:card.offsetHeight, w:card.offsetWidth, last:null};
+/* —— 拖动排序：直接按住拖动即可，轻点仍是打开（无需进入模式） —— */
+function startDrag(card,pid,x,y){
   card.classList.add('dragging');
+  drag={el:card,pid:pid,x:x,y:y};
+}
+function onDown(e,card){
+  if(e.pointerType==='mouse' && e.button!==0) return;
+  armed={el:card,pid:e.pointerId,sx:e.clientX,sy:e.clientY};
 }
 function onMove(e){
-  if(!drag) return;
-  e.preventDefault();
-  var dx=e.clientX-drag.x, dy=e.clientY-drag.y;
-  drag.el.style.transform='translate('+dx+'px,'+dy+'px)';
-  // 找到指针下的卡片
-  drag.el.style.visibility='hidden';
-  var under=document.elementFromPoint(e.clientX,e.clientY);
-  drag.el.style.visibility='';
-  var target=under&&under.closest('.card:not(.add)');
-  if(target && target!==drag.el && listEl.contains(target)){
-    var r=target.getBoundingClientRect();
-    var before=(e.clientY < r.top + r.height/2) || (e.clientX < r.left + r.width/2 && Math.abs(e.clientY-(r.top+r.height/2)) < r.height/2);
-    if(before) listEl.insertBefore(drag.el, target);
-    else listEl.insertBefore(drag.el, target.nextSibling);
-    drag.x=e.clientX; drag.y=e.clientY; drag.el.style.transform='';
+  if(armed && !drag){
+    var dx=e.clientX-armed.sx, dy=e.clientY-armed.sy;
+    if(Math.hypot(dx,dy)>8){            // 移动超过阈值 → 进入拖动
+      startDrag(armed.el,armed.pid,armed.sx,armed.sy);
+      armed=null;
+    } else { return; }
+  }
+  if(drag){
+    e.preventDefault();
+    var dx2=e.clientX-drag.x, dy2=e.clientY-drag.y;
+    drag.el.style.transform='translate('+dx2+'px,'+dy2+'px)';
+    drag.el.style.visibility='hidden';
+    var under=document.elementFromPoint(e.clientX,e.clientY);
+    drag.el.style.visibility='';
+    var target=under&&under.closest('.card:not(.add)');
+    if(target && target!==drag.el && listEl.contains(target)){
+      var r=target.getBoundingClientRect();
+      var before=(e.clientY < r.top + r.height/2) || (e.clientX < r.left + r.width/2 && Math.abs(e.clientY-(r.top+r.height/2)) < r.height/2);
+      if(before) listEl.insertBefore(drag.el, target);
+      else listEl.insertBefore(drag.el, target.nextSibling);
+      drag.x=e.clientX; drag.y=e.clientY; drag.el.style.transform='';
+    }
   }
 }
 function onUp(e){
-  if(!drag) return;
-  try{drag.el.releasePointerCapture(drag.pid);}catch(_){}
-  drag.el.classList.remove('dragging');
-  drag.el.style.transform='';
-  saveOrder(readOrderFromDOM());
-  drag=null;
+  if(armed){ armed=null; return; } // 轻点：正常打开链接
+  if(drag){
+    drag.el.classList.remove('dragging'); drag.el.style.transform='';
+    saveOrder(readOrderFromDOM());
+    suppressClick=true;
+    drag=null;
+  }
 }
 
-sortBtn.addEventListener('click',function(){
-  sortMode=!sortMode;
-  document.body.classList.toggle('sorting',sortMode);
-  sortBtn.textContent = sortMode ? '完成 ✓' : '↕ 排序';
-  hintEl.innerHTML = sortMode
-    ? '拖动卡片调整顺序，松手自动保存 · 点「完成 ✓」退出'
-    : DEFAULT_HINT;
-  render();
+listEl.addEventListener('click',function(e){
+  if(suppressClick){ e.preventDefault(); e.stopPropagation(); suppressClick=false; }
+},true);
+
+resetBtn.addEventListener('click',function(){
+  try{localStorage.removeItem(SAVE_KEY);}catch(_){}
+  buildOrder(currentList); render();
+  var h=document.getElementById('hint');
+  var old=h.innerHTML; h.innerHTML='已恢复默认顺序 ✓';
+  setTimeout(function(){h.innerHTML=old;},1400);
 });
+
 document.addEventListener('pointermove',onMove,{passive:false});
-document.addEventListener('pointerup',onUp);
-document.addEventListener('pointercancel',onUp);
+window.addEventListener('pointerup',onUp);
+window.addEventListener('pointercancel',onUp);
 
 (function(){
   fetch('workbenches.json',{cache:'no-store'})
     .then(function(r){return r.ok?r.json():Promise.reject();})
-    .then(function(list){ buildOrder(list); render(); })
-    .catch(function(){ buildOrder(FALLBACK); render(); });
+    .then(function(list){ currentList=list; buildOrder(list); render(); })
+    .catch(function(){ currentList=FALLBACK; buildOrder(FALLBACK); render(); });
 })();
 </script>
 </body>
