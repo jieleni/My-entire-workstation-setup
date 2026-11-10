@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>编剧工作台 · 云端数据整理下载器</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;background:#0f1117;color:#e8e8ea;padding:14px;max-width:720px;margin:0 auto;font-size:14px;line-height:1.6}
+.hd{font-size:18px;font-weight:800;margin-bottom:2px}
+.sub{font-size:12px;color:#8a8a92;margin-bottom:14px}
+.card{background:#1a1d27;border:1px solid #2a2e3a;border-radius:12px;padding:12px;margin-bottom:12px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab{padding:6px 12px;border-radius:8px;background:#232734;color:#cfd2da;font-size:13px;cursor:pointer;border:1px solid transparent}
+.tab.on{background:#3b82f6;color:#fff;border-color:#3b82f6}
+label{display:block;font-size:12px;color:#9aa0ad;margin:8px 0 4px}
+input,textarea,select{width:100%;background:#0f1117;border:1px solid #2a2e3a;border-radius:8px;padding:9px;color:#e8e8ea;font-size:13px;font-family:inherit}
+select{appearance:auto}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#3b82f6}
+button{cursor:pointer}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:42px}
+.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#9aa0ad;cursor:pointer;padding:0;border-radius:8px}
+.pw-eye:active{color:#3b82f6;background:#232734}
+.pw-eye svg{width:18px;height:18px;display:block;pointer-events:none}
+.btn{display:inline-block;padding:10px 14px;border-radius:9px;border:none;font-size:14px;font-weight:700;margin:6px 6px 0 0}
+.b-primary{background:#3b82f6;color:#fff}.b-green{background:#22c55e;color:#04210f}.b-gray{background:#2a2e3a;color:#cfd2da}.b-orange{background:#f59e0b;color:#231603}
+.status{font-size:12px;margin-top:8px;color:#9aa0ad;white-space:pre-wrap;word-break:break-all}
+.fld{border-top:1px solid #232734;padding:10px 0}
+.fld .lbl{font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:5px}
+.fld textarea{min-height:60px;resize:vertical}
+.hint{font-size:11px;color:#6b7280;margin-top:6px}
+#preview{display:none}
+pre{white-space:pre-wrap;word-break:break-word;background:#0f1117;border-radius:8px;padding:10px;font-size:12px;color:#b8bcc6;max-height:280px;overflow:auto}
+.note{font-size:11px;color:#f59e0b;background:#2a210f;border:1px solid #4a3a12;border-radius:8px;padding:8px;margin-top:8px;line-height:1.5}
+.ok{color:#22c55e}.err{color:#f87171}
+</style>
+</head>
+<body>
+<div class="hd">🎬 编剧工作台 · 云端数据整理下载器</div>
+<div class="sub">填 API / Gist → 测试连接 → 拉取数据 → 一键整理 → 一键下载 DOC / TXT（中文不乱码）</div>
+
+<div class="card">
+  <div class="tabs">
+    <div class="tab on" data-tab="api">API 接口</div>
+    <div class="tab" data-tab="gist">GitHub Gist</div>
+    <div class="tab" data-tab="demo">示例数据</div>
+  </div>
+
+  <!-- API -->
+  <div id="pane-api">
+    <label>接口地址（返回 JSON 或加密文本）</label>
+    <input id="apiUrl" placeholder="https://api.github.com/gists/你的GistID  或  https://your-api/backup.json">
+    <label>Authorization 请求头（可选，如 Bearer xxxx）</label>
+    <input id="apiAuth" placeholder="Bearer xxxxx 或留空">
+    <label>其他自定义 Header（可选，每行 名字: 值）</label>
+    <textarea id="apiHeaders" rows="2" placeholder="X-Custom: value"></textarea>
+    <label>解密口令 / 密钥（可选，备份加密时填写）</label>
+    <input id="apiPass" type="password" placeholder="留空=自动探测明文/Base64/CryptoJS" autocomplete="off">
+    <div style="margin-top:8px">
+      <button class="btn b-gray" onclick="testApi()">① 测试连接</button>
+      <button class="btn b-primary" onclick="fetchApi()">② 拉取并整理</button>
+    </div>
+    <div class="note" id="apiNote">提示：测试连接只发一次 GET 看是否通；拉取并整理才会取数、解密、映射到 9 字段。GitHub 接口支持浏览器跨域，私有 Gist 需在 Authorization 填 Token。</div>
+  </div>
+
+  <!-- Gist -->
+  <div id="pane-gist" style="display:none">
+    <label>GitHub Token（需 gist 权限，仅存本机浏览器）</label>
+    <div class="pw-wrap">
+      <input id="gistToken" type="password" placeholder="ghp_xxx 或 github_pat_xxx" autocomplete="off">
+      <button type="button" class="pw-eye" onclick="toggleEye('gistToken',this)" aria-label="显示/隐藏 Token" title="显示/隐藏 Token">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <button class="btn b-gray" onclick="listGists()" style="margin-top:8px">① 列出我的备份 Gist</button>
+    <div id="gistListWrap" style="display:none;margin-top:8px">
+      <label>选择工作台备份（按时间倒序）</label>
+      <select id="gistSel"></select>
+    </div>
+    <label>解密口令 / 密钥（可选）</label>
+    <input id="gistPass" type="password" placeholder="留空=自动探测" autocomplete="off">
+    <div style="margin-top:8px"><button class="btn b-primary" onclick="fetchGist()">② 获取并整理</button></div>
+  </div>
+
+  <!-- 示例 -->
+  <div id="pane-demo" style="display:none">
+    <div class="hint">点击「载入示例」即可加载内置示例备份，预览 9 字段整理与下载效果。</div>
+    <div style="margin-top:8px"><button class="btn b-primary" onclick="loadDemo()">② 载入示例并整理</button></div>
+  </div>
+
+  <div style="margin-top:10px">
+    <button class="btn b-green" onclick="generate('doc')">③ 下载 DOC</button>
+    <button class="btn b-green" onclick="generate('txt')">③ 下载 TXT</button>
+    <button class="btn b-gray" onclick="clearAll()">清空</button>
+  </div>
+  <div class="status" id="status">选择取数方式，按步骤操作。</div>
+</div>
+
+<div class="card" id="preview">
+  <div class="hd" style="font-size:15px">整理结果（可直接修改后再下载）</div>
+  <div class="hint">9 个字段已自动从备份映射并清洗，若某字段为空或错位，可直接在此编辑。</div>
+  <div id="fields"></div>
+</div>
+
+<div class="card">
+  <div class="hd" style="font-size:14px">原始内容（调试用）</div>
+  <pre id="raw">—</pre>
+</div>
+
+<script>
+const FIELDS = [
+  {key:'title',   label:'1. 题目 / 标题',   syn:['题目','标题','title','name','剧名','workname','projectname']},
+  {key:'genre',   label:'2. 题材、集数',      syn:['题材','集数','type','genre','episodes','题材集数','类型']},
+  {key:'hook',    label:'3. 一句话卖点',     syn:['一句话卖点','卖点','hook','logline','sell','亮点','sellpoint']},
+  {key:'tags',    label:'4. 卖点标签',        syn:['卖点标签','标签','tags','labels','tag','标签列表']},
+  {key:'outline', label:'5. 大纲',           syn:['大纲','outline','synopsis','梗概总览','故事大纲','story']},
+  {key:'characters',label:'6. 人物小传',      syn:['人物小传','人物','characters','角色','人物介绍','角色小传','人物设定']},
+  {key:'scenes',  label:'7. 场景库',          syn:['场景库','场景','scenes','locations','地点','场景设定']},
+  {key:'episodes',label:'8. 分集梗概',        syn:['分集梗概','分集','episode','episodesummary','每集梗概','分集大纲','集纲']},
+  {key:'content', label:'9. 正文内容',        syn:['正文','正文内容','content','script','body','全文','剧本','正文']},
+];
+let current = {};
+let rawText = '';
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    ['api','gist','demo'].forEach(k=>{ document.getElementById('pane-'+k).style.display = (k===t.dataset.tab)?'block':'none'; });
+  };
+});
+function setStatus(s,err){document.getElementById('status').textContent=s; if(err)console.error(err);}
+
+function normalize(v){
+  if(v==null) return '';
+  if(Array.isArray(v)) return v.map(x=>typeof x==='object'?JSON.stringify(x,null,2):String(x)).join('\n');
+  if(typeof v==='object') return JSON.stringify(v,null,2);
+  return String(v);
+}
+function clean(s){ return s.replace(/\r\n/g,'\n').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(); }
+function autoMap(data){
+  const out={}; const keys=Object.keys(data);
+  for(const f of FIELDS){
+    let found=null;
+    for(const syn of f.syn){const k=keys.find(k=>k.toLowerCase()===syn.toLowerCase()); if(k){found=k;break;}}
+    if(!found) for(const syn of f.syn){const k=keys.find(k=>k.toLowerCase().includes(syn.toLowerCase())); if(k){found=k;break;}}
+    out[f.key] = found!==null ? clean(normalize(data[found])) : '';
+  }
+  if(FIELDS.every(f=>!out[f.key]) && keys.length){
+    out.content = clean(keys.map(k=>`【${k}】\n${normalize(data[k])}`).join('\n\n'));
+  }
+  return out;
+}
+function renderPreview(){
+  const box=document.getElementById('fields'); box.innerHTML='';
+  for(const f of FIELDS){
+    const d=document.createElement('div'); d.className='fld';
+    d.innerHTML=`<div class="lbl">${f.label}</div><textarea data-k="${f.key}">${escapeHtml(current[f.key]||'')}</textarea>`;
+    box.appendChild(d);
+  }
+  document.getElementById('preview').style.display='block';
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function collectFields(){ document.querySelectorAll('#fields textarea').forEach(t=>{current[t.dataset.k]=t.value;}); }
+
+/* ---------- 解密 ---------- */
+function utf8ToStr(u8){return new TextDecoder().decode(u8);}
+function strToU8(s){return new TextEncoder().encode(s);}
+function looksLikeJson(s){const t=s.trim();return (t.startsWith('{')&&t.endsWith('}'))||(t.startsWith('[')&&t.endsWith(']'));}
+function md5(bytes){
+  function r(h){return ('00000000'+h.toString(16)).slice(-8);}
+  function add(a,b){return (a+b)&0xffffffff;}
+  function rol(n,c){return (n<<c)|(n>>>(32-c));}
+  const s=[]; for(let i=0;i<64;i++) s[i]=(Math.abs(Math.sin(i+1))*4294967296)>>>0;
+  const x=new Uint32Array(16);
+  for(let i=0;i<16;i++) x[i]=(bytes[i*4]|(bytes[i*4+1]<<8)|(bytes[i*4+2]<<16)|(bytes[i*4+3]<<24))>>>0;
+  let a=1732584193,b=4023233417,c=2562383102,d=271733878;
+  const K=[7,12,17,22,5,9,14,20,4,11,16,23,6,10,15,21];
+  for(let i=0;i<64;i++){
+    let f,gi;
+    if(i<16){f=(b&c)|(~b&d);gi=i;}
+    else if(i<32){f=(d&b)|(~d&c);gi=(5*i+1)%16;}
+    else if(i<48){f=b^c^d;gi=(3*i+5)%16;}
+    else{f=c^(b|(~d));gi=(7*i)%16;}
+    const tmp=add(add(a,f),add(s[i],x[gi]));
+    a=d;d=c;c=b;b=add(b,rol(tmp,K[i]));
+  }
+  return [r(add(1732584193,a)),r(add(4023233417,b)),r(add(2562383102,c)),r(add(271733878,d))].join('');
+}
+function bytesToHex(b){return [...b].map(x=>('0'+(x&255).toString(16)).slice(-2)).join('');}
+function hexToBytes(h){const o=[];for(let i=0;i<h.length;i+=2)o.push(parseInt(h.substr(i,2),16));return new Uint8Array(o);}
+function evpKDFbytes(password,salt,keyBytes,ivBytes){
+  const enc=strToU8(password);
+  let d=''; let prev=new Uint8Array(0);
+  const target=keyBytes+ivBytes;
+  while(d.length/2<target){
+    const blob=new Uint8Array(prev.length+enc.length+salt.length);
+    blob.set(prev,0); blob.set(enc,prev.length); blob.set(salt,prev.length+enc.length);
+    const h=md5(blob); prev=hexToBytes(h); d+=h;
+  }
+  const full=hexToBytes(d);
+  return {key:full.slice(0,keyBytes), iv:full.slice(keyBytes,keyBytes+ivBytes)};
+}
+async function aesCbcDecrypt(keyBytes,ivBytes,ct){
+  const key=await crypto.subtle.importKey('raw',keyBytes,{name:'AES-CBC'},false,['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-CBC',iv:ivBytes},key,ct);
+  return new Uint8Array(pt);
+}
+async function decryptText(raw, candidates){
+  const trimmed=raw.trim();
+  if(looksLikeJson(trimmed)){ try{ JSON.parse(trimmed); return {text:trimmed,method:'明文JSON'}; }catch(e){} }
+  try{ const b=atob(trimmed); const s=utf8ToStr(strToU8(b)); if(looksLikeJson(s)) return {text:s,method:'Base64(JSON)'}; }catch(e){}
+  if(trimmed.startsWith('U2FsdGVkX1')){
+    let body; try{ body=atob(trimmed.slice(8)); }catch(e){ return null; }
+    const bodyU8=strToU8(body); const salt=bodyU8.slice(0,8); const ct=bodyU8.slice(8);
+    for(const pw of candidates){
+      if(!pw) continue;
+      try{
+        const {key,iv}=evpKDFbytes(pw,salt,32,16);
+        const pt=await aesCbcDecrypt(key,iv,ct);
+        const s=utf8ToStr(pt);
+        if(looksLikeJson(s)||s.length>0) return {text:s,method:'CryptoJS-AES(口令:'+(pw.length>6?pw.slice(0,3)+'…':pw)+')'};
+      }catch(e){}
+    }
+    return {text:null,method:'CryptoJS-AES(需正确口令)'};
+  }
+  for(const pw of candidates){
+    if(!pw) continue;
+    try{
+      const dgst=await crypto.subtle.digest('SHA-256',strToU8(pw));
+      const key=await crypto.subtle.importKey('raw',dgst,{name:'AES-GCM'},false,['decrypt']);
+      const ct=strToU8(trimmed); const iv=ct.slice(0,12); const data=ct.slice(12);
+      const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,data);
+      const s=utf8ToStr(new Uint8Array(pt));
+      if(looksLikeJson(s)) return {text:s,method:'AES-GCM(口令)'};
+    }catch(e){}
+  }
+  return {text:trimmed,method:'未加密/无法识别，原样返回'};
+}
+function parseData(text){
+  let data=JSON.parse(text);
+  if(Array.isArray(data)) data=data[0]||{};
+  if(data && data.data && typeof data.data==='object') data=data.data;
+  if(data && Array.isArray(data.projects)) data=data.projects[0]||{};
+  if(data && Array.isArray(data.list)) data=data.list[0]||{};
+  return data;
+}
+function applyData(text, methodLabel){
+  const data=parseData(text);
+  current=autoMap(data); renderPreview(); collectFields();
+  setStatus('✅ 解密方式：'+(methodLabel||'')+'；已映射 '+(FIELDS.filter(f=>current[f.key]).length)+'/9 个字段。可编辑后下载。');
+}
+
+/* ---------- API ---------- */
+function buildHeaders(){
+  const hdr={};
+  const auth=document.getElementById('apiAuth').value.trim();
+  if(auth) hdr['Authorization']=auth;
+  document.getElementById('apiHeaders').value.split('\n').forEach(l=>{const i=l.indexOf(':');if(i>0)hdr[l.slice(0,i).trim()]=l.slice(i+1).trim();});
+  return hdr;
+}
+async function testApi(){
+  const url=document.getElementById('apiUrl').value.trim();
+  if(!url){setStatus('请先填写接口地址');return;}
+  setStatus('正在测试连接…');
+  const t0=Date.now();
+  try{
+    const r=await fetch(url,{method:'GET',headers:buildHeaders()});
+    const ms=Date.now()-t0;
+    const txt=await r.text();
+    const ok=r.ok;
+    document.getElementById('status').innerHTML=`${ok?'<span class="ok">✅ 连接成功</span>':'<span class="err">❌ 连接失败</span>'} · HTTP ${r.status} · ${ms}ms · 返回 ${txt.length} 字节`+(ok?'':'（检查地址/Token/权限）');
+    if(ok){ rawText=txt; document.getElementById('raw').textContent=txt.slice(0,5000); }
+  }catch(e){ setStatus('❌ 连接异常：'+e.message+'（多为跨域 CORS 或地址错误）', e); }
+}
+async function fetchApi(){
+  const url=document.getElementById('apiUrl').value.trim();
+  if(!url){setStatus('请先填写接口地址');return;}
+  const pass=document.getElementById('apiPass').value.trim();
+  setStatus('正在拉取并解密…');
+  try{
+    const r=await fetch(url,{headers:buildHeaders()});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const text=await r.text();
+    rawText=text; document.getElementById('raw').textContent=text.slice(0,5000);
+    const dec=await decryptText(text,[pass,'']);
+    if(dec.text===null){ setStatus('🔒 备份已加密且当前口令无法解开，请在「解密口令」填写正确密钥。',null); return; }
+    applyData(dec.text, dec.method);
+  }catch(e){ setStatus('❌ '+e.message,e); }
+}
+
+/* ---------- Gist ---------- */
+async function listGists(){
+  const tk=document.getElementById('gistToken').value.trim();
+  if(!tk){setStatus('请先填写 GitHub Token');return;}
+  setStatus('正在列出 Gist…');
+  try{
+    const r=await fetch('https://api.github.com/gists',{headers:{'Authorization':'Bearer '+tk,'Accept':'application/vnd.github+json'}});
+    if(!r.ok) throw new Error('GitHub HTTP '+r.status+(r.status===401?'（Token 无效或无 gist 权限）':''));
+    const arr=await r.json();
+    const sel=document.getElementById('gistSel'); sel.innerHTML='';
+    const matched=arr.filter(g=>{const d=(g.description||'').toLowerCase();const f=Object.keys(g.files||{}).join(' ').toLowerCase();return d.includes('备份')||d.includes('工作台')||d.includes('编剧')||f.includes('备份')||f.includes('编剧')||f.includes('screenwrite');});
+    const list=matched.length?matched:arr.slice(0,20);
+    list.forEach((g,i)=>{const ts=g.updated_at?g.updated_at.replace('T',' ').slice(0,19):'';const o=document.createElement('option');o.value=g.id;o.textContent=`${g.description||'(无标题)'}${ts?' · '+ts:''}${i===0?' · 最新':''}`;sel.appendChild(o);});
+    document.getElementById('gistListWrap').style.display='block';
+    setStatus('✅ 找到 '+list.length+' 个 Gist。请选择后点「获取并整理」。');
+  }catch(e){ setStatus('❌ '+e.message,e); }
+}
+async function fetchGist(){
+  const tk=document.getElementById('gistToken').value.trim();
+  const gid=document.getElementById('gistSel').value;
+  const pass=document.getElementById('gistPass').value.trim();
+  if(!tk||!gid){setStatus('请先列出并选择 Gist');return;}
+  setStatus('正在获取 Gist 内容…');
+  try{
+    const r=await fetch('https://api.github.com/gists/'+gid,{headers:{'Authorization':'Bearer '+tk,'Accept':'application/vnd.github+json'}});
+    if(!r.ok) throw new Error('GitHub HTTP '+r.status);
+    const j=await r.json();
+    const files=Object.values(j.files||{});
+    if(!files.length) throw new Error('该 Gist 没有文件');
+    files.sort((a,b)=>(b.size||0)-(a.size||0));
+    const content=files[0].content||'';
+    rawText=content; document.getElementById('raw').textContent=content.slice(0,5000);
+    const dec=await decryptText(content,[pass, tk, '']);
+    if(dec.text===null){ setStatus('🔒 该备份已加密，请在「解密口令」填入密钥。',null); return; }
+    applyData(dec.text, dec.method);
+  }catch(e){ setStatus('❌ '+e.message,e); }
+}
+
+/* ---------- 示例 ---------- */
+function loadDemo(){ current=autoMap(DEMO); renderPreview(); collectFields(); rawText=JSON.stringify(DEMO,null,2); document.getElementById('raw').textContent=rawText; setStatus('✅ 已载入示例数据。'); }
+
+/* ---------- 生成 ---------- */
+function buildText(){ collectFields(); let t=''; for(const f of FIELDS){ t+=`【${f.label}】\n`+(current[f.key]||'（暂无）')+'\n\n'; } return t.trim(); }
+function buildDocHtml(){
+  collectFields(); let body='';
+  for(const f of FIELDS){ body+=`<h2 style="color:#1a3c6e">${f.label}</h2><p>${escapeHtml(current[f.key]||'（暂无）').replace(/\n/g,'<br>')}</p>`; }
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>编剧工作台备份文档</title></head><body style="font-family:Microsoft YaHei,SimSun,sans-serif;font-size:14px;line-height:1.8">${body}</body></html>`;
+}
+function save(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+function generate(type){
+  if(!Object.keys(current).length){setStatus('请先整理再下载');return;}
+  if(type==='txt'){ const b=new Blob(['\uFEFF'+buildText()],{type:'text/plain;charset=utf-8'}); save(b,'编剧工作台备份文档.txt'); setStatus('✅ 已生成 TXT（含 UTF-8 BOM，不乱码）。'); }
+  else{ const b=new Blob(['\uFEFF'+buildDocHtml()],{type:'application/msword;charset=utf-8'}); save(b,'编剧工作台备份文档.doc'); setStatus('✅ 已生成 DOC（Word 可直接打开，中文不乱码）。'); }
+}
+function clearAll(){ current={}; document.getElementById('fields').innerHTML=''; document.getElementById('preview').style.display='none'; document.getElementById('raw').textContent='—'; setStatus('已清空。'); }
+
+const EYE_OPEN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+function toggleEye(id,btn){
+  const el=document.getElementById(id);
+  if(el.type==='password'){ el.type='text'; btn.innerHTML=EYE_OFF; }
+  else { el.type='password'; btn.innerHTML=EYE_OPEN; }
+}
+
+const DEMO={
+  "题目":"《她从雨里来》",
+  "题材":"都市情感 / 32 集",
+  "一句话卖点":"一个被原生家庭吸血的女孩，用十年把自己活成别人的避风港，却在最后一场雨里学会先救自己。",
+  "卖点标签":["女性成长","原生家庭","治愈系","逆袭","都市情感"],
+  "大纲":"第一幕：林晚在雨夜救下醉酒的顾沉，两人因一场误会的债务捆绑。第二幕：林晚的吸血家庭不断索取，顾沉暗中替她还债却从不说破。第三幕：林晚发现真相，决意切断血缘绑架，与顾沉在暴雨中告别过去。",
+  "人物小传":"林晚｜26岁，疗愈师。表面温柔，实则习惯性自我牺牲，童年被母亲当作情绪提款机。\n顾沉｜31岁，建筑事务所合伙人。寡言，用行动代替承诺，曾被家族背叛故不轻易交付信任。\n林母｜控制型母亲，以爱之名行索取之实。",
+  "场景库":"① 老城区雨巷（潮湿、昏黄路灯）\n② 顾沉的顶层公寓（冷色调、极简）\n③ 林家老宅（堆满旧物的压抑空间）\n④ 海边灯塔（结局和解之地）",
+  "分集梗概":"第1集：雨夜相遇，误认债主。\n第2集：被迫同居，防线初松。\n第3集：母亲来电，旧伤复发。\n……（共32集，每集围绕一个\"救与被救\"的拉扯展开）",
+  "正文内容":"（此处为完整剧本正文，由编剧工作台逐集撰写后同步至云端备份。示例略。）"
+};
+</script>
+</body>
+</html>
