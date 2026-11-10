@@ -1,0 +1,34 @@
+[
+  {
+    "file": "learning-dashboard.html",
+    "name": "任务工作台",
+    "emoji": "📋",
+    "color": "blue",
+    "tag": "learning-dashboard.html",
+    "desc": "日常学习 / 目标管理看板。打卡、目标、板块进度、超额统计都在这里。"
+  },
+  {
+    "file": "screenwrite.html",
+    "name": "编剧工作台",
+    "emoji": "🎬",
+    "color": "amber",
+    "tag": "screenwrite.html（你导出的本体）",
+    "desc": "剧本创作主工作台：选题、大纲、人物小传、分集梗概、正文一站式编辑。"
+  },
+  {
+    "file": "api-screenwrite-tool.html",
+    "name": "编剧备份调取工具",
+    "emoji": "☁️",
+    "color": "teal",
+    "tag": "api-screenwrite-tool.html",
+    "desc": "填入 API / GitHub Gist，测试连接 → 拉取云端备份 → 一键整理成 9 字段文档下载。"
+  },
+  {
+    "file": "taiyi.html",
+    "name": "太乙环星情报中心",
+    "emoji": "🔮",
+    "color": "violet",
+    "tag": "taiyi.html（塔罗占卜·你导出的本体）",
+    "desc": "太乙环星情报中心（塔罗占卜）。你以往全部代码的最终集合升级版，尚未优化完。"
+  }
+]
