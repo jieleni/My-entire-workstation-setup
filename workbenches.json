@@ -16,7 +16,7 @@
     "desc": "剧本创作主工作台：选题、大纲、人物小传、分集梗概、正文一站式编辑。"
   },
   {
-    "file": "api-screenwrite-tool.html",
+    "file": "screenwrite-tool.html",
     "name": "编剧备份调取工具",
     "emoji": "☁️",
     "color": "teal",
