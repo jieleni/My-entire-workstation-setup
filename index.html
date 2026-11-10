@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>我的工作台</title>
+<style>
+  :root{
+    --bg:#0a0d18; --card:rgba(255,255,255,.045); --card-hi:rgba(255,255,255,.10);
+    --line:rgba(255,255,255,.09); --txt:#f3f6ff; --sub:#9aa6c7; --muted:#7c87a8;
+    --blue1:#4f7cff; --blue2:#7aa0ff;
+    --amber1:#ff9d3c; --amber2:#ffc24b;
+    --teal1:#1fc7a0; --teal2:#37e0c4;
+    --violet1:#9a5cff; --violet2:#d06bff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--txt);min-height:100vh;min-height:100dvh;
+    padding:max(20px,env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(1100px 620px at 12% -10%,rgba(79,124,255,.22),transparent 55%),
+      radial-gradient(900px 560px at 92% 4%,rgba(154,92,255,.18),transparent 55%),
+      radial-gradient(800px 600px at 50% 108%,rgba(31,199,160,.12),transparent 55%),
+      linear-gradient(180deg,#0e1222,#080a12);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:560px;margin:0 auto}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px}
+  header h1{font-size:26px;font-weight:800;letter-spacing:.5px;
+    background:linear-gradient(100deg,#a9c0ff 0%,#cda8ff 45%,#7be0c9 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--sub);font-size:12.5px;margin-top:5px}
+
+  .sort-btn{
+    flex:0 0 auto;border:1px solid var(--line);background:var(--card-hi);
+    color:var(--txt);font-size:13px;font-weight:600;padding:9px 15px;border-radius:999px;
+    cursor:pointer;transition:.18s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  }
+  .sort-btn:active{transform:scale(.96)}
+  body.sorting .sort-btn{background:linear-gradient(135deg,var(--teal1),var(--teal2));border-color:transparent;color:#04231c}
+
+  .hint{color:var(--muted);font-size:11.5px;margin:14px 2px 20px;line-height:1.6;min-height:16px;transition:.2s}
+  .hint b{color:#cdd6f5;font-weight:600}
+  body.sorting .hint{color:#8fe9d4}
+
+  .list{display:flex;flex-direction:column;gap:13px;position:relative}
+
+  .card{
+    position:relative;display:flex;align-items:center;gap:14px;
+    background:var(--card);border:1px solid var(--line);border-radius:22px;
+    padding:15px 16px;text-decoration:none;color:inherit;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    box-shadow:0 10px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04);
+    transition:transform .15s ease,border-color .15s ease,background .15s ease,box-shadow .15s ease;
+    touch-action:pan-y;
+  }
+  .card:active{background:var(--card-hi)}
+  .badge{
+    flex:0 0 auto;width:54px;height:54px;border-radius:16px;
+    display:flex;align-items:center;justify-content:center;font-size:27px;
+    box-shadow:0 8px 18px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.18);
+  }
+  .badge.blue{background:linear-gradient(135deg,var(--blue1),var(--blue2))}
+  .badge.amber{background:linear-gradient(135deg,var(--amber1),var(--amber2))}
+  .badge.teal{background:linear-gradient(135deg,var(--teal1),var(--teal2))}
+  .badge.violet{background:linear-gradient(135deg,var(--violet1),var(--violet2))}
+  .body{flex:1;min-width:0}
+  .body h2{font-size:16.5px;font-weight:700;margin-bottom:3px;letter-spacing:.2px}
+  .body .desc{font-size:12.5px;color:var(--sub);line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .body .tag{display:inline-block;margin-top:7px;font-size:10.5px;color:#aab4d6;
+    background:rgba(255,255,255,.06);border:1px solid var(--line);padding:2px 8px;border-radius:999px}
+  .arrow{flex:0 0 auto;color:var(--muted);font-size:22px;font-weight:300;padding-left:2px;transition:.18s}
+
+  /* 排序模式 */
+  .grip{flex:0 0 auto;display:none;color:var(--muted);font-size:20px;letter-spacing:-2px;
+    padding:4px 2px;cursor:grab;user-select:none}
+  body.sorting .arrow{display:none}
+  body.sorting .grip{display:flex}
+  body.sorting .card{cursor:grab;touch-action:none;border-color:rgba(127,224,212,.35)}
+  body.sorting .card:active{background:var(--card)}
+  .card.dragging{z-index:30;box-shadow:0 18px 44px rgba(0,0,0,.5);
+    border-color:rgba(127,224,212,.6);transform:scale(1.025);cursor:grabbing;
+    background:var(--card-hi)}
+  .card.dropbefore{box-shadow:0 -3px 0 0 var(--teal2)}
+
+  .add{border-style:dashed;background:transparent;box-shadow:none}
+  .add .badge{background:rgba(255,255,255,.05);box-shadow:none;color:var(--muted);font-size:30px}
+  .add .body h2{color:var(--muted)}
+  .add .arrow{display:none}
+  body.sorting .add{opacity:.45}
+
+  footer{text-align:center;color:var(--muted);font-size:11px;margin-top:28px;line-height:1.7;opacity:.85}
+  footer code{background:rgba(255,255,255,.07);padding:1px 5px;border-radius:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <header>
+      <h1>🧭 我的工作台</h1>
+      <p>一个网址，进所有工作台</p>
+    </header>
+    <button class="sort-btn" id="sortBtn">↕ 排序</button>
+  </div>
+  <div class="hint" id="hint">想加新工作台？往文件夹丢一个 <b>.html</b>，在 <b>workbenches.json</b> 加一行，下面自动多一张卡。</div>
+
+  <div class="list" id="list"></div>
+
+  <footer>
+    部署：本文件夹所有文件推到 GitHub 仓库，Settings → Pages → <code>main</code> / <code>root</code>。<br>
+    各工作台均为单文件静态页，零后端；顺序保存在你所用浏览器的本地存储。
+  </footer>
+</div>
+
+<script>
+var SAVE_KEY='nav_order_v1';
+var DEFAULT_HINT='想加新工作台？往文件夹丢一个 <b>.html</b>，在 <b>workbenches.json</b> 加一行，下面自动多一张卡。';
+var FALLBACK = [
+  {file:"learning-dashboard.html", name:"任务工作台", emoji:"📋", color:"blue", tag:"learning-dashboard.html",
+   desc:"日常学习 / 目标管理看板。打卡、目标、板块进度、超额统计都在这里。"},
+  {file:"screenwrite.html", name:"编剧工作台", emoji:"🎬", color:"amber", tag:"screenwrite.html（你导出的本体）",
+   desc:"剧本创作主工作台：选题、大纲、人物小传、分集梗概、正文一站式编辑。"},
+  {file:"api-screenwrite-tool.html", name:"编剧备份调取工具", emoji:"☁️", color:"teal", tag:"api-screenwrite-tool.html",
+   desc:"填入 API / GitHub Gist，测试连接 → 拉取云端备份 → 一键整理成 9 字段文档下载。"},
+  {file:"taiyi.html", name:"太乙环星情报中心", emoji:"🔮", color:"violet", tag:"taiyi.html（塔罗占卜·你导出的本体）",
+   desc:"太乙环星情报中心（塔罗占卜）。你以往全部代码的最终集合升级版，尚未优化完。"}
+];
+
+var byFile={}, ordered=[], sortMode=false, drag=null;
+var listEl=document.getElementById('list');
+var sortBtn=document.getElementById('sortBtn');
+var hintEl=document.getElementById('hint');
+
+function loadOrder(){ try{return JSON.parse(localStorage.getItem(SAVE_KEY))||[]}catch(e){return[]} }
+function saveOrder(files){ try{localStorage.setItem(SAVE_KEY,JSON.stringify(files))}catch(e){} }
+
+function buildOrder(list){
+  byFile={}; list.forEach(function(w){byFile[w.file]=w});
+  var saved=loadOrder().map(function(f){return byFile[f]}).filter(Boolean);
+  var seen=new Set(saved.map(function(w){return w.file}));
+  var extra=list.filter(function(w){return !seen.has(w.file)});
+  ordered=saved.concat(extra);
+}
+
+function cardHTML(w){
+  return '<a class="card" data-file="'+w.file+'" href="'+w.file+'">'+
+    '<div class="badge '+(w.color||'blue')+'">'+(w.emoji||'📄')+'</div>'+
+    '<div class="body"><h2>'+(w.name||w.file)+'</h2>'+
+    '<div class="desc">'+(w.desc||'')+'</div>'+
+    '<span class="tag">'+(w.tag||w.file)+'</span></div>'+
+    '<div class="arrow">›</div>'+
+    '<div class="grip">⠿</div></a>';
+}
+function addCardHTML(){
+  return '<div class="card add">'+
+    '<div class="badge">＋</div>'+
+    '<div class="body"><h2>新增工作台</h2>'+
+    '<div class="desc">把新的 .html 放进本文件夹，并在 workbenches.json 里加一行，上面就会自动出现一张新卡片。</div></div></div>';
+}
+function render(){
+  listEl.innerHTML = ordered.map(cardHTML).join('') + addCardHTML();
+  bindCards();
+}
+function readOrderFromDOM(){
+  return Array.prototype.map.call(listEl.querySelectorAll('.card:not(.add)'),function(c){return c.dataset.file});
+}
+
+function bindCards(){
+  Array.prototype.forEach.call(listEl.querySelectorAll('.card:not(.add)'),function(card){
+    card.addEventListener('click',function(e){ if(sortMode){ e.preventDefault(); } });
+    if(sortMode){
+      card.addEventListener('pointerdown',function(e){ onDown(e,card); });
+    }
+  });
+}
+
+function onDown(e,card){
+  e.preventDefault();
+  try{card.setPointerCapture(e.pointerId);}catch(_){}
+  drag={el:card, pid:e.pointerId, y:e.clientY, h:card.offsetHeight, last:null};
+  card.classList.add('dragging');
+}
+function onMove(e){
+  if(!drag) return;
+  e.preventDefault();
+  var dy=e.clientY-drag.y;
+  drag.el.style.transform='translateY('+dy+'px)';
+  // 找到指针下的卡片
+  drag.el.style.visibility='hidden';
+  var under=document.elementFromPoint(e.clientX,e.clientY);
+  drag.el.style.visibility='';
+  var target=under&&under.closest('.card:not(.add)');
+  if(target && target!==drag.el && listEl.contains(target)){
+    var r=target.getBoundingClientRect();
+    var before=(e.clientY < r.top + r.height/2);
+    if(before) listEl.insertBefore(drag.el, target);
+    else listEl.insertBefore(drag.el, target.nextSibling);
+    drag.y=e.clientY; drag.el.style.transform='';
+  }
+}
+function onUp(e){
+  if(!drag) return;
+  try{drag.el.releasePointerCapture(drag.pid);}catch(_){}
+  drag.el.classList.remove('dragging');
+  drag.el.style.transform='';
+  saveOrder(readOrderFromDOM());
+  drag=null;
+}
+
+sortBtn.addEventListener('click',function(){
+  sortMode=!sortMode;
+  document.body.classList.toggle('sorting',sortMode);
+  sortBtn.textContent = sortMode ? '完成 ✓' : '↕ 排序';
+  hintEl.innerHTML = sortMode
+    ? '拖动卡片调整顺序，松手自动保存 · 点「完成 ✓」退出'
+    : DEFAULT_HINT;
+  render();
+});
+document.addEventListener('pointermove',onMove,{passive:false});
+document.addEventListener('pointerup',onUp);
+document.addEventListener('pointercancel',onUp);
+
+(function(){
+  fetch('workbenches.json',{cache:'no-store'})
+    .then(function(r){return r.ok?r.json():Promise.reject();})
+    .then(function(list){ buildOrder(list); render(); })
+    .catch(function(){ buildOrder(FALLBACK); render(); });
+})();
+</script>
+</body>
+</html>
